@@ -1,9 +1,10 @@
-import { times } from 'lodash';
 import React from 'react';
 import { View, Platform, KeyboardAvoidingView, Alert, StyleSheet } from 'react-native';
-import { GiftedChat } from 'react-native-gifted-chat';
+import { GiftedChat, InputToolbar } from 'react-native-gifted-chat';
 const firebase = require('firebase');
 require('firebase/firestore');
+import { AsyncStorage } from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 
 export default class Chat extends React.Component {
@@ -12,10 +13,11 @@ export default class Chat extends React.Component {
     this.state = {
       messages: [],
       _id: 0,
-      user : {
+      user: {
         _id: '',
         name: '',
-      }
+      },
+      isConnected: false,
     }
 
     const firebaseConfig = {
@@ -32,31 +34,82 @@ export default class Chat extends React.Component {
 
   }
 
-//shows static messages when component is mounted
+  //get messages from client side storage
+  async getMessages() {
+    let messages = '';
+    try {
+      messages = await AsyncStorage.getItem('messages') || [];
+      this.setState({
+        messages: JSON.parse(messages)
+      });
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
+  //delete message from client side storage
+  async deleteMessages() {
+    try {
+      await AsyncStorage.removeItem('messages');
+      this.setState({
+        messsages: []
+      })
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
+  //save message to client side storage
+  async saveMessages() {
+    try {
+      await AsyncStorage.setItem('messages', JSON.stringify(this.state.messages));
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
+  //checks to see if user is online or offline and returns accordingly
   componentDidMount() {
+
     const { name } = this.props.route.params;
     this.referenceChatMessages = firebase.firestore().collection('messages');
 
-    this.authUnsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
-      if (!user) {
-        await firebase.auth().signInAnonymously();
+    NetInfo.fetch().then(connection => {
+      if (connection.isConnected) {
+        this.setState({
+          isConnected: true
+        });
+        console.log('online');
+        this.authUnsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
+          if (!user) {
+            await firebase.auth().signInAnonymously();
+          }
+          this.setState({
+            user: {
+              _id: user.uid,
+              name: name,
+            },
+            messages: [],
+          });
+        });
+        this.unsubscribe = this.referenceChatMessages
+          .orderBy("createdAt", "desc")
+          .onSnapshot(this.onCollectionUpdate);
+      } else {
+        console.log('offline');
+        this.setState({
+          isConnected: false
+        });
+        this.getMessages();
+        this.unsubscribe = this.referenceChatMessages
+          .orderBy("createdAt", "desc")
+          .onSnapshot(this.onCollectionUpdate);
       }
-      this.setState({
-        user: {
-          _id: user.uid,
-          name: name,
-        },
-        messages: [],
-      });
-    });
-    this.unsubscribe = this.referenceChatMessages
-       .orderBy("createdAt", "desc")
-       .onSnapshot(this.onCollectionUpdate);
+    })
   }
 
   componentWillUnmount() {
-    this.unsubscribe();
-    this.authUnsubscribe();
+
   }
 
   onCollectionUpdate = (querySnapshot) => {
@@ -84,9 +137,10 @@ export default class Chat extends React.Component {
     this.setState(previousState => ({
       messages: GiftedChat.append(previousState.messages, messages),
     }),
-    () => {
-      this.addMessage();
-    }
+      () => {
+        this.saveMessages();
+        this.addMessage();
+      }
     )
   }
 
@@ -100,21 +154,29 @@ export default class Chat extends React.Component {
     })
   }
 
+  renderInputToolbar = props => {
+    if (this.state.isConnected === false) {
+    } else {
+      return <InputToolbar {...props} />;
+    }
+  }
+
 
   render() {
     let name = this.props.route.params.name;
-    this.props.navigation.setOptions({title: name });
+    this.props.navigation.setOptions({ title: name });
     let background = this.props.route.params.background;
 
     return (
-      <View style={{flex: 1, backgroundColor: background}}>
+      <View style={{ flex: 1, backgroundColor: background }}>
         <GiftedChat
-      messages = {this.state.messages}
-      onSend={(messages) => this.onSend(messages)}
-      user={this.state.user}
-      alwaysShowSend
-      />
-      { Platform.OS === 'android' ?  <KeyboardAdvoidingView behavior='height' /> : null }
+          renderInputToolbar={this.renderInputToolbar}
+          messages={this.state.messages}
+          onSend={(messages) => this.onSend(messages)}
+          user={this.state.user}
+          alwaysShowSend
+        />
+        {Platform.OS === 'android' ? <KeyboardAdvoidingView behavior='height' /> : null}
       </View>
     )
   }
