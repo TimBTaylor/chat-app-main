@@ -13,8 +13,8 @@ location.
 
 ### Technologies
 - React Native ![alt text](https://github.com/TimBTaylor/personal-portfolio/blob/main/projects-images/react.svg)
-- Expo
-- Google Firestore Database
+- Expo ![alt text](https://github.com/TimBTaylor/personal-portfolio/blob/main/projects-images/expo.svg)
+- Google Firestore Database ![alt text](https://github.com/TimBTaylor/personal-portfolio/blob/main/projects-images/firebase.svg)
 
 ### How to install
 1. Download code file from this repository
