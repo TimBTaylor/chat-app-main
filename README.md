@@ -1,7 +1,7 @@
 # ChatApp
 
-## Desciption
-A chat app for mobile devices using React Native. The app
+## Description
+A chat app for mobile devices. The app
 provides users with a chat interface and options to share images and their
 location.
 
