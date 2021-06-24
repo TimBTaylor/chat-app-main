@@ -12,7 +12,7 @@ location.
 - The conversation is stored online and offline
 
 ### Technologies
-- React Native ![alt text](https://github.com/TimBTaylor/personal-portfolio/blob/main/images/atom.svg)
+- React Native ![alt text](https://github.com/TimBTaylor/personal-portfolio/blob/main/projects-images/react.svg)
 - Expo
 - Google Firestore Database
 
