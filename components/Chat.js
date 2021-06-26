@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Platform, KeyboardAvoidingView, Alert, StyleSheet, LogBox } from 'react-native';
+import { View, Platform, KeyboardAvoidingView, Alert, StyleSheet } from 'react-native';
 import { GiftedChat, InputToolbar } from 'react-native-gifted-chat';
 const firebase = require('firebase');
 require('firebase/firestore');
@@ -75,7 +75,6 @@ export default class Chat extends React.Component {
 
   //checks to see if user is online or offline and returns accordingly
   componentDidMount() {
-    LogBox.ignoreLogs(['Animated.event: `now requires a second argument for options`']);
 
     const { name } = this.props.route.params;
     this.referenceChatMessages = firebase.firestore().collection('messages');
