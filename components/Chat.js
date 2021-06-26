@@ -1,10 +1,13 @@
 import React from 'react';
-import { View, Platform, KeyboardAvoidingView, Alert, StyleSheet } from 'react-native';
+import { View, Platform, KeyboardAvoidingView, Alert, StyleSheet, LogBox } from 'react-native';
 import { GiftedChat, InputToolbar } from 'react-native-gifted-chat';
 const firebase = require('firebase');
 require('firebase/firestore');
 import { AsyncStorage } from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import CustomActions from './CustomActions';
+import MapView from 'react-native-maps';
+
 
 
 export default class Chat extends React.Component {
@@ -18,6 +21,8 @@ export default class Chat extends React.Component {
         name: '',
       },
       isConnected: false,
+      image: null,
+      location: null,
     }
 
     const firebaseConfig = {
@@ -70,6 +75,7 @@ export default class Chat extends React.Component {
 
   //checks to see if user is online or offline and returns accordingly
   componentDidMount() {
+    LogBox.ignoreLogs(['Animated.event: `now requires a second argument for options`']);
 
     const { name } = this.props.route.params;
     this.referenceChatMessages = firebase.firestore().collection('messages');
@@ -109,9 +115,10 @@ export default class Chat extends React.Component {
   }
 
   componentWillUnmount() {
-
+    this.unsubscribe();
   }
 
+  //updates messages when there is a new message or if one gets deleted
   onCollectionUpdate = (querySnapshot) => {
     const messages = [];
     // go through each document
@@ -125,7 +132,9 @@ export default class Chat extends React.Component {
         user: {
           _id: data.user._id,
           name: data.user.name,
-        }
+        },
+        image: data.image || null,
+        location: data.location || null,
       })
     })
     this.setState({
@@ -133,6 +142,7 @@ export default class Chat extends React.Component {
     })
   }
 
+  // is called when user send message
   onSend(messages = []) {
     this.setState(previousState => ({
       messages: GiftedChat.append(previousState.messages, messages),
@@ -144,16 +154,20 @@ export default class Chat extends React.Component {
     )
   }
 
+  //adds message to firestore
   addMessage() {
     const message = this.state.messages[0];
     this.referenceChatMessages.add({
       _id: message._id,
       createdAt: message.createdAt,
-      text: message.text,
+      text: message.text || null,
       user: message.user,
+      image: message.image || null,
+      location: message.location || null,
     })
   }
 
+  // checks if user is offline, if so input bar does not render
   renderInputToolbar = props => {
     if (this.state.isConnected === false) {
     } else {
@@ -161,10 +175,38 @@ export default class Chat extends React.Component {
     }
   }
 
+  // returns custom map view
+  renderCustomView = props => {
+    const { currentMessage } = props;
+    if (currentMessage.location) {
+        return (
+            <MapView
+                style={{
+                    width: 150,
+                    height: 100,
+                    borderRadius: 13,
+                    margin: 3
+                }}
+                region={{
+                    latitude: Number(currentMessage.location.latitude),
+                    longitude: Number(currentMessage.location.longitude),
+                    latitudeDelta: 0.0922,
+                    longitudeDelta: 0.0421
+                }}
+            />
+        );
+    }
+    return null;
+}
+
+  renderCustomActions = (props) => {
+    return <CustomActions {...props} />;
+  }
+
 
   render() {
     let name = this.props.route.params.name;
-    this.props.navigation.setOptions({ title: name });
+    this.props.navigation.setOptions({ title: `${name}'s Chatroom` });
     let background = this.props.route.params.background;
 
     return (
@@ -175,8 +217,10 @@ export default class Chat extends React.Component {
           onSend={(messages) => this.onSend(messages)}
           user={this.state.user}
           alwaysShowSend
+          renderActions={this.renderCustomActions}
+          renderCustomView={this.renderCustomView}
         />
-        {Platform.OS === 'android' ? <KeyboardAdvoidingView behavior='height' /> : null}
+        {Platform.OS === 'android' ? <KeyboardAvoidingView behavior='height' /> : null}
       </View>
     )
   }
