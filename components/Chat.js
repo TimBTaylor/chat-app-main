@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Platform, KeyboardAvoidingView, Alert, StyleSheet } from 'react-native';
+import { View, Platform, KeyboardAvoidingView, Alert, StyleSheet, LogBox } from 'react-native';
 import { GiftedChat, InputToolbar } from 'react-native-gifted-chat';
 const firebase = require('firebase');
 require('firebase/firestore');
@@ -37,6 +37,11 @@ export default class Chat extends React.Component {
       firebase.initializeApp(firebaseConfig);
     }
 
+    LogBox.ignoreLogs([
+      'Animated.event now requires a second argument for options',
+      'Warning: Cannot update a component from inside the function body of a different component.',
+    ]);
+  
   }
 
   //get messages from client side storage
@@ -71,7 +76,7 @@ export default class Chat extends React.Component {
     } catch (error) {
       console.log(error.message);
     }
-  }
+  };
 
   //checks to see if user is online or offline and returns accordingly
   componentDidMount() {
@@ -91,7 +96,7 @@ export default class Chat extends React.Component {
           }
           this.setState({
             user: {
-              _id: user._id,
+              _id: user.uid,
               name: name,
             },
             messages: [],
